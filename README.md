@@ -1,11 +1,20 @@
 # StarkVideo
 
-**Turn a sentence into a video.** StarkVideo is a small web app that makes short AI video clips from a text prompt, right in your browser. It's free, needs no sign-up, and has no build step.
+StarkVideo is a browser-based AI video generator that turns text prompts and optional photos into short video clips. It uses a static, dependency-free setup and does not require an install or build step.
 
-- **Free engine:** [LTX-Video](https://huggingface.co/spaces/Lightricks/ltx-video-distilled) by Lightricks, running on Hugging Face's free GPUs
-- **Optional paid engine:** Google Veo 3.1 through the Gemini API (better quality, with sound, up to 4K)
+- **Free engine:** LTX-Video on Hugging Face Spaces
+- **Optional paid engines:** Google Veo 3.1, Fast, and Lite through the Gemini API
+- **Preview mode:** Generate mock results locally with demo mode
 
----
+## Table of contents
+
+- [Features](#features)
+- [Getting started](#getting-started)
+- [Video engines](#video-engines)
+- [Project structure](#project-structure)
+- [Development](#development)
+- [Privacy and security](#privacy-and-security)
+- [Documentation and credits](#documentation-and-credits)
 
 ## Features
 
@@ -19,22 +28,26 @@
 - **Accessible:** keyboard shortcuts (<kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Enter</kbd> to generate), focus trapping in the settings dialog, screen-reader status updates, and support for reduced motion and Windows high-contrast mode.
 - **Demo mode:** plays sample clips without calling any engine, so you can try the UI for free.
 
-## Quick start
+## Getting started
 
-There's nothing to install. It's plain HTML, CSS and JavaScript.
+No dependencies are required. The project runs as plain HTML, CSS, and JavaScript.
 
 1. Clone the repo:
    ```bash
-   git clone https://github.com/Tonystark300398/My-first-website-demo.git
-   cd My-first-website-demo
+   git clone https://github.com/Tonystark300398/My-first-website-demo.git StarkVideo
+   cd StarkVideo
    ```
-2. Open `index.html` in a browser. A local server works best, for example the VS Code **Live Server** extension, or:
+2. Start a local server:
    ```bash
    npx serve .
    ```
 3. Type a prompt and click **Make video**.
 
-## Engines
+You can also open `index.html` directly in a browser, but a local server is recommended for consistent browser behavior.
+
+To use the free engine without external setup, type a prompt and generate a clip. For an API setup, engine selection, and troubleshooting, follow the [API setup guide](docs/API_SETUP.md).
+
+## Video engines
 
 | Engine | Cost | Length | Sound | Max quality | Needs |
 |---|---|---|---|---|---|
@@ -64,7 +77,18 @@ See **[API_SETUP.md](docs/API_SETUP.md)** for step-by-step setup, the API flow, 
 └── .gitignore
 ```
 
-`assets/js/script.js` is a single dependency-free script. The only external library, [`@gradio/client`](https://www.npmjs.com/package/@gradio/client), is loaded from a CDN, and only when the free engine is used.
+`assets/js/script.js` contains the application logic. The only external runtime library is [`@gradio/client`](https://www.npmjs.com/package/@gradio/client), loaded from a CDN when the free engine is used.
+
+## Development
+
+The project has no build configuration or package manager setup. When editing files, update the corresponding asset path in `index.html` if you move them.
+
+- **Markup:** [index.html](index.html)
+- **Styles:** [assets/css/style.css](assets/css/style.css)
+- **Application logic:** [assets/js/script.js](assets/js/script.js)
+- **Engine setup documentation:** [docs/API_SETUP.md](docs/API_SETUP.md)
+
+VS Code users can launch the root page with the Chrome configuration in [launch.json](.vscode/launch.json).
 
 ## Privacy and security
 
@@ -72,7 +96,8 @@ See **[API_SETUP.md](docs/API_SETUP.md)** for step-by-step setup, the API flow, 
 - Tokens, keys, your theme choice and your prompt draft are stored only in your browser's `localStorage`.
 - With Google Veo, the browser calls the Gemini API directly. That's fine for personal use, but **before you publish the site with your own key, move the Veo call to a small backend** so visitors can't see the key. Never commit keys to Git.
 
-## Credits
+## Documentation and credits
 
+- Setup guide: [docs/API_SETUP.md](docs/API_SETUP.md)
 - Video models: [LTX-Video](https://github.com/Lightricks/LTX-Video) by Lightricks · [Google Veo](https://ai.google.dev/gemini-api/docs/veo)
 - Fonts: [Bricolage Grotesque](https://fonts.google.com/specimen/Bricolage+Grotesque) and [Instrument Sans](https://fonts.google.com/specimen/Instrument+Sans)
