@@ -1,4 +1,4 @@
-// Stark Video AI
+// StarkVideo
 // Engines:
 //   - "free": LTX-Video on Hugging Face Spaces (Lightricks/ltx-video-distilled) via @gradio/client
 //   - Google Veo 3.1 through the Gemini API (paid key): https://ai.google.dev/gemini-api/docs/veo
@@ -247,7 +247,7 @@
 
         job.then(function (result) {
             showResult(form, result);
-            if (document.hidden) document.title = 'Video ready - Stark';
+            if (document.hidden) document.title = 'Video ready - StarkVideo';
         }).catch(function (err) {
             if (err && err.name === 'AbortError') {
                 setView('empty');
@@ -600,7 +600,7 @@
         if (item.blob && navigator.canShare) {
             var file = new File([item.blob], 'stark-video.mp4', { type: 'video/mp4' });
             if (navigator.canShare({ files: [file] })) {
-                navigator.share({ files: [file], title: 'AI video made with Stark' }).catch(function () { /* dismissed */ });
+                navigator.share({ files: [file], title: 'AI video made with StarkVideo' }).catch(function () { /* dismissed */ });
                 return;
             }
         }
@@ -732,7 +732,7 @@
     function truncate(s, n) { return s.length > n ? s.slice(0, n - 1) + '…' : s; }
 
     document.addEventListener('visibilitychange', function () {
-        if (!document.hidden) document.title = 'Stark Video AI - Free text-to-video';
+        if (!document.hidden) document.title = 'StarkVideo - Free text-to-video';
     });
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

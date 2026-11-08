@@ -1,4 +1,4 @@
-# Stark Video AI: Setup Guide
+# StarkVideo: Setup Guide
 
 ## Free engine (default): no key, no credit card
 
