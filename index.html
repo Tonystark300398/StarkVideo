@@ -7,10 +7,14 @@
     <meta name="description" content="Type a sentence, get a short AI video. Free, no sign-up, runs in your browser.">
     <meta name="theme-color" content="#f2f3f7" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#11131f" media="(prefers-color-scheme: dark)">
+    <script>
+        // Apply a saved light/dark choice before first paint (no flash)
+        (function () { try { var t = localStorage.getItem('stark_theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {} })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/css/style.css">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%235b4bff'/%3E%3Cpath d='M12 9l11 7-11 7z' fill='white'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -23,6 +27,9 @@
         <symbol id="i-image" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4.5 5h15v14h-15z M4.5 16l4.5-4.5 3.5 3.5 2.5-2.5 4.5 4.5 M15.5 9.5h.01"/></symbol>
         <symbol id="i-close" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></symbol>
         <symbol id="i-redo" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M19 5v5h-5 M19 10a7.5 7.5 0 1 0 1.5 5"/></symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z M12 2.5v2 M12 19.5v2 M2.5 12h2 M19.5 12h2 M5.3 5.3l1.4 1.4 M17.3 17.3l1.4 1.4 M5.3 18.7l1.4-1.4 M17.3 6.7l1.4-1.4"/></symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></symbol>
+        <symbol id="i-edit" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 20h4L19 9l-4-4L4 16z M13.5 6.5l4 4"/></symbol>
     </svg>
 
     <a class="skip-link" href="#prompt">Skip to the video maker</a>
@@ -38,12 +45,18 @@
                 <a href="#tips">Prompt tips</a>
                 <a href="#faq">FAQ</a>
             </nav>
-            <button class="engine-button" id="settings-btn" type="button" aria-haspopup="dialog">
-                <span class="engine-dot" aria-hidden="true"></span>
-                <span id="engine-badge">Free engine</span>
-                <svg class="icon" aria-hidden="true"><use href="#i-gear"/></svg>
-                <span class="visually-hidden">Open settings</span>
-            </button>
+            <div class="header-actions">
+                <button class="icon-button theme-button" id="theme-btn" type="button" aria-label="Switch to dark theme">
+                    <svg class="icon icon-moon" aria-hidden="true"><use href="#i-moon"/></svg>
+                    <svg class="icon icon-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+                </button>
+                <button class="engine-button" id="settings-btn" type="button" aria-haspopup="dialog">
+                    <span class="engine-dot" aria-hidden="true"></span>
+                    <span id="engine-badge">Free engine</span>
+                    <svg class="icon" aria-hidden="true"><use href="#i-gear"/></svg>
+                    <span class="visually-hidden">Open settings</span>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -58,7 +71,10 @@
                     <div class="field">
                         <div class="field-head">
                             <label for="prompt">What should happen in the video?</label>
-                            <span class="char-count" id="char-count" aria-live="polite">0 / 500</span>
+                            <span class="field-tools">
+                                <button type="button" class="text-button" id="clear-btn" hidden>Clear</button>
+                                <span class="char-count" id="char-count">0 / 500</span>
+                            </span>
                         </div>
                         <textarea id="prompt" rows="4" maxlength="500" placeholder="A red fox trots through fresh snow in a pine forest at sunrise, slow camera pan, soft golden light"></textarea>
                         <div class="ideas" aria-label="Prompt ideas">
@@ -67,6 +83,15 @@
                             <button type="button" class="idea" data-prompt="A paper boat floats down a rainy city street gutter, neon reflections, close-up tracking shot">Paper boat in the rain</button>
                             <button type="button" class="idea" data-prompt="A cup of coffee on a wooden table, steam rising, morning light through a window, macro shot">Morning coffee</button>
                             <button type="button" class="idea" data-prompt="An astronaut walks slowly across a red desert planet, two moons in the sky, cinematic wide shot">Astronaut on Mars</button>
+                        </div>
+                        <div class="ideas boosters" aria-label="Add detail to your prompt">
+                            <span class="ideas-label">Add:</span>
+                            <button type="button" class="booster" data-add="slow camera pan" aria-pressed="false">Slow pan</button>
+                            <button type="button" class="booster" data-add="aerial drone shot" aria-pressed="false">Drone shot</button>
+                            <button type="button" class="booster" data-add="close-up shot" aria-pressed="false">Close-up</button>
+                            <button type="button" class="booster" data-add="golden hour light" aria-pressed="false">Golden hour</button>
+                            <button type="button" class="booster" data-add="neon lights at night" aria-pressed="false">Neon night</button>
+                            <button type="button" class="booster" data-add="slow motion" aria-pressed="false">Slow motion</button>
                         </div>
                     </div>
 
@@ -118,13 +143,14 @@
                             <img id="attach-img" alt="Selected starting photo">
                             <button type="button" id="attach-remove" aria-label="Remove photo"><svg class="icon"><use href="#i-close"/></svg></button>
                         </div>
+                        <span class="attach-hint" id="attach-hint">or drop / paste a photo here</span>
                     </div>
 
                     <button class="generate" id="generate-btn" type="submit">
                         <svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>
                         <span id="generate-label">Make video</span>
                     </button>
-                    <p class="hint" id="generate-hint">Free engine: LTX-Video on Hugging Face. Ctrl + Enter also works.</p>
+                    <p class="hint generate-hint"><span id="generate-hint">Free engine: LTX-Video on Hugging Face.</span> <span class="kbd-hint"><kbd id="kbd-mod">Ctrl</kbd> + <kbd>Enter</kbd> also works.</span></p>
                 </form>
             </div>
 
@@ -171,6 +197,7 @@
                     <div class="output-actions">
                         <button type="button" class="pill-button" id="download-btn"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Download</button>
                         <button type="button" class="pill-button ghost" id="share-btn"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg>Share</button>
+                        <button type="button" class="pill-button ghost" id="reuse-btn"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg>Edit prompt</button>
                     </div>
                 </div>
 
@@ -288,13 +315,19 @@
 
             <div class="field" id="hf-fields">
                 <label for="hf-token">Hugging Face token <span class="optional">optional</span></label>
-                <input type="password" id="hf-token" placeholder="hf_…" autocomplete="off" spellcheck="false">
+                <div class="input-wrap">
+                    <input type="password" id="hf-token" placeholder="hf_…" autocomplete="off" spellcheck="false">
+                    <button type="button" class="text-button reveal" data-reveal="hf-token" aria-pressed="false" aria-label="Show token">Show</button>
+                </div>
                 <p class="hint">Gives you more free GPU time. Create a free "Read" token at <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">huggingface.co/settings/tokens</a>.</p>
             </div>
 
             <div class="field" id="veo-fields" hidden>
                 <label for="api-key">Gemini API key</label>
-                <input type="password" id="api-key" placeholder="AIza…" autocomplete="off" spellcheck="false">
+                <div class="input-wrap">
+                    <input type="password" id="api-key" placeholder="AIza…" autocomplete="off" spellcheck="false">
+                    <button type="button" class="text-button reveal" data-reveal="api-key" aria-pressed="false" aria-label="Show key">Show</button>
+                </div>
                 <p class="hint">Needs billing turned on. Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.</p>
             </div>
 
@@ -314,6 +347,6 @@
 
     <div class="toasts" id="toasts" aria-live="polite"></div>
 
-    <script src="script.js"></script>
+    <script src="assets/js/script.js"></script>
 </body>
 </html>

@@ -39,8 +39,11 @@
         'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4'
     ];
 
+    var THEME_COLORS = { light: '#f2f3f7', dark: '#11131f' };
+    var PROMPT_MAX = 500;
+
     // ==================== STATE ====================
-    var settings = { engine: 'free', hfToken: '', apiKey: '', demo: false };
+    var settings = { engine: 'free', hfToken: '', apiKey: '', demo: false, theme: null };   // theme: null = follow system
     var state = {
         busy: false,
         abort: null,
@@ -59,6 +62,7 @@
 
     function cacheDom() {
         [
+            'theme-btn', 'clear-btn', 'reuse-btn', 'kbd-mod',
             'maker', 'prompt', 'char-count', 'style', 'length-group', 'resolution-field', 'resolution-group',
             'start-image', 'attach-text', 'attach-preview', 'attach-img', 'attach-remove',
             'generate-btn', 'generate-label', 'generate-hint',
@@ -76,30 +80,58 @@
     function init() {
         cacheDom();
         loadSettings();
+        applyTheme();
+        restoreDraft();
         renderLengths();
         applyEngineUI();
         bindEvents();
-        updateCharCount();
+        promptChanged();
         updateMeta();
         if (el.year) el.year.textContent = String(new Date().getFullYear());
+        if (/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) el.kbdMod.textContent = '⌘';
     }
 
     function bindEvents() {
         el.maker.addEventListener('submit', function (e) { e.preventDefault(); generate(); });
-        el.prompt.addEventListener('input', updateCharCount);
+        el.prompt.addEventListener('input', promptChanged);
         el.prompt.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); generate(); }
         });
+        el.prompt.addEventListener('paste', onPaste);
+        el.clearBtn.addEventListener('click', function () { replacePrompt('', 'Prompt cleared.'); el.prompt.focus(); });
 
         document.querySelectorAll('[data-prompt]').forEach(function (b) {
             b.addEventListener('click', function () {
-                el.prompt.value = b.getAttribute('data-prompt');
-                updateCharCount();
+                replacePrompt(b.getAttribute('data-prompt'), 'Prompt replaced.');
                 if (b.classList.contains('use-prompt')) {
                     document.querySelector('.studio').scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
                 el.prompt.focus({ preventScroll: true });
             });
+        });
+        document.querySelectorAll('.booster').forEach(function (b) {
+            b.addEventListener('click', function () { toggleBooster(b); });
+        });
+
+        bindDropZone();
+
+        el.themeBtn.addEventListener('click', function () {
+            settings.theme = isDarkTheme() ? 'light' : 'dark';
+            persist();
+            applyTheme();
+        });
+        var darkQuery = systemDarkQuery();
+        if (darkQuery) {
+            var onSystemChange = function () { if (!settings.theme) applyTheme(); };
+            if (darkQuery.addEventListener) darkQuery.addEventListener('change', onSystemChange);
+            else if (darkQuery.addListener) darkQuery.addListener(onSystemChange);
+        }
+
+        // Warn before leaving while a video is still being made
+        window.addEventListener('beforeunload', function (e) {
+            if (!state.busy) return;
+            e.preventDefault();
+            e.returnValue = '';
         });
 
         el.maker.addEventListener('change', function (e) {
@@ -121,6 +153,13 @@
         });
         el.downloadBtn.addEventListener('click', download);
         el.shareBtn.addEventListener('click', share);
+        el.reuseBtn.addEventListener('click', function () {
+            var item = state.history[state.current];
+            if (!item) return;
+            replacePrompt(item.prompt, 'Prompt replaced.');
+            el.prompt.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.prompt.focus({ preventScroll: true });
+        });
 
         // Settings dialog
         el.settingsBtn.addEventListener('click', openSettings);
@@ -128,6 +167,12 @@
         el.saveSettingsBtn.addEventListener('click', saveSettings);
         el.settings.querySelectorAll('input[name="engine"]').forEach(function (r) {
             r.addEventListener('change', updateSettingsFields);
+        });
+        el.settings.querySelectorAll('[data-reveal]').forEach(function (b) {
+            b.addEventListener('click', function () { setRevealed(b, $(b.getAttribute('data-reveal')).type === 'password'); });
+        });
+        [el.hfToken, el.apiKey].forEach(function (input) {
+            input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); saveSettings(); } });
         });
         document.addEventListener('keydown', function (e) {
             if (el.settings.hidden) return;
@@ -184,8 +229,8 @@
         el.generateHint.textContent = settings.demo
             ? 'Demo mode is on: you will see a sample clip. Turn it off in Settings.'
             : isVeo()
-                ? 'Google Veo: 1–6 minutes, billed to your Gemini API key. Ctrl + Enter also works.'
-                : 'Free engine: LTX-Video on Hugging Face, usually under a minute. Ctrl + Enter also works.';
+                ? 'Google Veo: 1–6 minutes, billed to your Gemini API key.'
+                : 'Free engine: LTX-Video on Hugging Face, usually under a minute.';
         el.demoModeFooter.checked = settings.demo;
         updateMeta();
     }
@@ -196,10 +241,62 @@
         el.vfMeta.textContent = parts.join('  ');
     }
 
-    function updateCharCount() {
-        var n = el.prompt.value.length;
-        el.charCount.textContent = n + ' / 500';
+    // ---------- Prompt helpers ----------
+    function promptChanged() {
+        var text = el.prompt.value;
+        var n = text.length;
+        el.charCount.textContent = n + ' / ' + PROMPT_MAX;
         el.charCount.classList.toggle('is-good', n >= 60);
+        el.charCount.title = n && n < 60 ? 'Tip: 60+ characters usually gives a better video.' : '';
+        el.clearBtn.hidden = n === 0;
+        document.querySelectorAll('.booster').forEach(function (b) {
+            b.setAttribute('aria-pressed', String(hasPhrase(text, b.getAttribute('data-add'))));
+        });
+        store(function () {
+            if (text.trim()) localStorage.setItem('stark_draft', text);
+            else localStorage.removeItem('stark_draft');
+        });
+    }
+
+    function setPrompt(text) {
+        el.prompt.value = text;
+        promptChanged();
+    }
+
+    // Replace the whole prompt, offering Undo if the user's own text is overwritten
+    function replacePrompt(text, message) {
+        var before = el.prompt.value;
+        setPrompt(text);
+        if (before.trim() && before !== text) {
+            toast(message, 'info', { label: 'Undo', run: function () { setPrompt(before); el.prompt.focus(); } });
+        }
+    }
+
+    function restoreDraft() {
+        var draft = store(function () { return localStorage.getItem('stark_draft'); });
+        if (draft && !el.prompt.value) el.prompt.value = draft.slice(0, PROMPT_MAX);
+    }
+
+    function hasPhrase(text, phrase) {
+        return text.toLowerCase().indexOf(phrase.toLowerCase()) >= 0;
+    }
+
+    function toggleBooster(b) {
+        var phrase = b.getAttribute('data-add');
+        var text = el.prompt.value;
+        if (hasPhrase(text, phrase)) {
+            text = text.replace(new RegExp('(,\\s*)?' + escapeRegExp(phrase), 'i'), '')
+                .replace(/^\s*,\s*/, '')
+                .trim();
+        } else {
+            var base = text.replace(/[\s,.]+$/, '');
+            text = base ? base + ', ' + phrase : phrase.charAt(0).toUpperCase() + phrase.slice(1);
+        }
+        if (text.length > PROMPT_MAX) {
+            toast('Your prompt would go over ' + PROMPT_MAX + ' characters. Shorten it first.', 'error');
+            return;
+        }
+        setPrompt(text);
     }
 
     function getForm() {
@@ -560,7 +657,10 @@
     // ==================== PHOTO ====================
     function onImageSelected(e) {
         var file = e.target.files && e.target.files[0];
-        if (!file) return;
+        if (file) useImageFile(file);
+    }
+
+    function useImageFile(file, sourceLabel) {
         if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { toast('Choose a PNG, JPEG or WebP photo.', 'error'); return; }
         if (file.size > 15 * 1024 * 1024) { toast('That photo is over 15 MB. Choose a smaller one.', 'error'); return; }
         var reader = new FileReader();
@@ -569,9 +669,56 @@
             state.startImage = { mimeType: file.type, data: dataUrl.split(',')[1], dataUrl: dataUrl };
             el.attachImg.src = dataUrl;
             el.attachPreview.hidden = false;
-            el.attachText.textContent = file.name;
+            el.attachText.textContent = sourceLabel || file.name;
+            if (sourceLabel) toast('Photo added. The video will start from it.', 'success');
         };
         reader.readAsDataURL(file);
+    }
+
+    // Paste an image straight into the prompt box
+    function onPaste(e) {
+        var items = (e.clipboardData && e.clipboardData.items) || [];
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].kind === 'file' && /^image\//.test(items[i].type)) {
+                var file = items[i].getAsFile();
+                if (file) { e.preventDefault(); useImageFile(file, 'Pasted photo'); }
+                return;
+            }
+        }
+    }
+
+    // Drag a photo anywhere onto the form
+    function bindDropZone() {
+        var depth = 0;
+        function hasFiles(e) {
+            var types = e.dataTransfer && e.dataTransfer.types;
+            return !!types && Array.prototype.indexOf.call(types, 'Files') >= 0;
+        }
+        function reset() { depth = 0; el.maker.classList.remove('is-dropping'); }
+
+        el.maker.addEventListener('dragenter', function (e) {
+            if (!hasFiles(e)) return;
+            e.preventDefault();
+            depth++;
+            el.maker.classList.add('is-dropping');
+        });
+        el.maker.addEventListener('dragover', function (e) {
+            if (!hasFiles(e)) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        el.maker.addEventListener('dragleave', function (e) {
+            if (!hasFiles(e)) return;
+            depth = Math.max(0, depth - 1);
+            if (!depth) reset();
+        });
+        el.maker.addEventListener('drop', function (e) {
+            if (!hasFiles(e)) return;
+            e.preventDefault();
+            reset();
+            var file = e.dataTransfer.files && e.dataTransfer.files[0];
+            if (file) useImageFile(file, file.name);
+        });
     }
 
     function clearImage() {
@@ -621,6 +768,8 @@
             settings.hfToken = localStorage.getItem('stark_hf_token') || '';
             settings.apiKey = localStorage.getItem('stark_gemini_api_key') || '';
             settings.demo = localStorage.getItem('stark_demo_mode') === 'true';
+            var theme = localStorage.getItem('stark_theme');
+            settings.theme = theme === 'light' || theme === 'dark' ? theme : null;
         });
     }
 
@@ -630,6 +779,35 @@
             localStorage.setItem('stark_demo_mode', String(settings.demo));
             settings.hfToken ? localStorage.setItem('stark_hf_token', settings.hfToken) : localStorage.removeItem('stark_hf_token');
             settings.apiKey ? localStorage.setItem('stark_gemini_api_key', settings.apiKey) : localStorage.removeItem('stark_gemini_api_key');
+            settings.theme ? localStorage.setItem('stark_theme', settings.theme) : localStorage.removeItem('stark_theme');
+        });
+    }
+
+    // ---------- Theme ----------
+    function systemDarkQuery() {
+        return window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    }
+
+    function isDarkTheme() {
+        if (settings.theme) return settings.theme === 'dark';
+        var q = systemDarkQuery();
+        return !!(q && q.matches);
+    }
+
+    function applyTheme() {
+        var root = document.documentElement;
+        if (settings.theme) root.setAttribute('data-theme', settings.theme);
+        else root.removeAttribute('data-theme');
+
+        var dark = isDarkTheme();
+        el.themeBtn.classList.toggle('is-dark', dark);
+        el.themeBtn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+        el.themeBtn.title = dark ? 'Light theme' : 'Dark theme';
+
+        // Keep the mobile browser bar in sync with the chosen theme
+        document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
+            var forMedia = /dark/.test(m.getAttribute('media') || '') ? 'dark' : 'light';
+            m.setAttribute('content', THEME_COLORS[settings.theme || forMedia]);
         });
     }
 
@@ -647,7 +825,15 @@
         if (checked) checked.focus();
     }
 
+    function setRevealed(button, show) {
+        var input = $(button.getAttribute('data-reveal'));
+        input.type = show ? 'text' : 'password';
+        button.textContent = show ? 'Hide' : 'Show';
+        button.setAttribute('aria-pressed', String(show));
+    }
+
     function closeSettings() {
+        el.settings.querySelectorAll('[data-reveal]').forEach(function (b) { setRevealed(b, false); });
         el.settings.hidden = true;
         document.body.classList.remove('modal-open');
         if (state.lastFocus && state.lastFocus.focus) state.lastFocus.focus();
@@ -688,22 +874,32 @@
     }
 
     // ==================== HELPERS ====================
-    function toast(message, type) {
+    // action (optional): { label: 'Undo', run: function () {} }
+    function toast(message, type, action) {
         var t = document.createElement('div');
         t.className = 'toast ' + (type || 'info');
         t.setAttribute('role', type === 'error' ? 'alert' : 'status');
         var p = document.createElement('p');
         p.textContent = message;
+        t.appendChild(p);
+        if (action) {
+            var a = document.createElement('button');
+            a.type = 'button';
+            a.className = 'toast-action';
+            a.textContent = action.label;
+            a.addEventListener('click', function () { t.remove(); action.run(); });
+            t.appendChild(a);
+        }
         var x = document.createElement('button');
         x.type = 'button';
+        x.className = 'toast-close';
         x.setAttribute('aria-label', 'Dismiss');
         x.innerHTML = '&times;';
         x.addEventListener('click', function () { t.remove(); });
-        t.appendChild(p);
         t.appendChild(x);
         while (el.toasts.children.length >= 2) el.toasts.firstChild.remove();
         el.toasts.appendChild(t);
-        setTimeout(function () { t.remove(); }, type === 'error' ? 8000 : 4500);
+        setTimeout(function () { t.remove(); }, type === 'error' || action ? 8000 : 4500);
     }
 
     function sleep(ms, signal) {
@@ -728,6 +924,7 @@
         return new Blob([arr], { type: mime });
     }
 
+    function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
     function pad(n) { return (n < 10 ? '0' : '') + n; }
     function truncate(s, n) { return s.length > n ? s.slice(0, n - 1) + '…' : s; }
 

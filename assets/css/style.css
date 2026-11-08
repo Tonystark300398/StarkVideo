@@ -1,6 +1,7 @@
 /* =========================================================
    StarkVideo — studio stylesheet
-   Light by default, dark via prefers-color-scheme.
+   Follows the system theme; the header toggle can force
+   light or dark (saved as data-theme on <html>).
    ========================================================= */
 
 :root {
@@ -35,7 +36,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
         --bg: #11131f;
         --surface: #191c2c;
         --surface-2: #22263a;
@@ -48,6 +49,19 @@
         --screen: #07080f;
         color-scheme: dark;
     }
+}
+:root[data-theme="dark"] {
+    --bg: #11131f;
+    --surface: #191c2c;
+    --surface-2: #22263a;
+    --ink: #eceef8;
+    --ink-soft: #a3a7c0;
+    --line: #2f344c;
+    --accent: #8a7dff;
+    --accent-ink: #0f1020;
+    --accent-soft: #2a2654;
+    --screen: #07080f;
+    color-scheme: dark;
 }
 
 /* ---------- Base ---------- */
@@ -178,6 +192,12 @@ button { cursor: pointer; }
 }
 .main-nav a:hover { color: var(--ink); background: var(--surface-2); }
 
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.theme-button { background: transparent; border: 1px solid var(--line); color: var(--ink-soft); }
+.theme-button:hover { color: var(--ink); border-color: var(--ink-soft); }
+.theme-button .icon-sun, .theme-button.is-dark .icon-moon { display: none; }
+.theme-button.is-dark .icon-sun { display: block; }
+
 .engine-button {
     display: inline-flex;
     align-items: center;
@@ -224,9 +244,30 @@ button { cursor: pointer; }
 }
 
 .maker {
+    position: relative;
     margin-top: 28px;
     display: grid;
     gap: 20px;
+}
+/* Drop-a-photo overlay */
+.maker.is-dropping::after {
+    content: "Drop the photo to animate it";
+    position: absolute;
+    inset: -12px;
+    display: grid;
+    place-items: center;
+    border: 2px dashed var(--accent);
+    border-radius: var(--r-lg);
+    background: color-mix(in srgb, var(--accent-soft) 92%, transparent);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.2rem;
+    z-index: 5;
+    pointer-events: none;
+}
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+    .maker.is-dropping::after { background: var(--accent-soft); }
 }
 
 .field { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
@@ -247,6 +288,30 @@ button { cursor: pointer; }
     font-variant-numeric: tabular-nums;
 }
 .char-count.is-good { color: var(--ok); }
+.field-tools { display: inline-flex; align-items: baseline; gap: 12px; }
+.text-button {
+    background: none;
+    border: 0;
+    padding: 2px 4px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+.text-button:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+kbd {
+    display: inline-block;
+    padding: 0 6px;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--ink);
+}
 
 textarea, input[type="password"], input[type="text"], select {
     width: 100%;
@@ -263,7 +328,7 @@ textarea {
     line-height: 1.5;
 }
 textarea::placeholder, input::placeholder { color: var(--ink-soft); opacity: 0.75; }
-textarea:focus, input[type="password"]:focus, select:focus {
+textarea:focus, input[type="password"]:focus, input[type="text"]:focus, select:focus {
     border-color: var(--accent);
     box-shadow: var(--focus);
 }
@@ -304,6 +369,21 @@ select {
     color: var(--ink-soft);
 }
 .idea:hover { color: var(--ink); border-color: var(--ink-soft); border-style: solid; }
+
+/* Detail chips: toggle a phrase in/out of the prompt */
+.booster {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.booster::before { content: "+ "; opacity: 0.7; }
+.booster:hover { color: var(--ink); border-color: var(--ink-soft); }
+.booster[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); font-weight: 600; }
+.booster[aria-pressed="true"]::before { content: "✓ "; opacity: 1; color: var(--accent); }
 
 .settings-row {
     display: grid;
@@ -398,6 +478,8 @@ select {
     padding: 0;
 }
 .attach-preview .icon { width: 14px; height: 14px; }
+.attach-hint { font-size: 0.85rem; color: var(--ink-soft); }
+.attach-preview:not([hidden]) ~ .attach-hint { display: none; }
 
 /* Generate */
 .generate {
@@ -880,6 +962,10 @@ select {
 .engine-option input:checked + span { border-color: var(--accent); background: var(--accent-soft); }
 .engine-option input:focus-visible + span { box-shadow: var(--focus); }
 
+.input-wrap { position: relative; }
+.input-wrap input { padding-right: 64px; }
+.input-wrap .reveal { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 6px 8px; }
+
 .optional { font-weight: 400; color: var(--ink-soft); font-size: 0.85rem; margin-left: 4px; }
 
 .check { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 0.95rem; }
@@ -925,9 +1011,19 @@ body.modal-open { overflow: hidden; }
 .toast.success::before { background: var(--ok); }
 .toast.error::before { background: var(--rec); }
 .toast p { flex: 1; }
-.toast button {
+.toast .toast-close {
     background: none; border: 0; color: inherit; opacity: 0.7;
     padding: 0 2px; font-size: 1.2rem; line-height: 1;
+}
+.toast .toast-action {
+    background: none;
+    border: 0;
+    padding: 0 4px;
+    color: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
 }
 
 /* ---------- Responsive ---------- */
@@ -940,7 +1036,7 @@ body.modal-open { overflow: hidden; }
 
 @media (max-width: 760px) {
     .main-nav { display: none; }
-    .engine-button { margin-left: auto; }
+    .header-actions { margin-left: auto; }
     .steps { grid-template-columns: minmax(0, 1fr); gap: 28px; }
     .steps li { padding-top: 0; padding-left: 58px; min-height: 40px; }
     .steps li:not(:last-child)::after {
@@ -958,6 +1054,11 @@ body.modal-open { overflow: hidden; }
     .vf-meta { display: none; }
     .output-actions { width: 100%; }
     .output-actions .pill-button { flex: 1; }
+}
+
+/* Touch devices: no keyboard shortcut or drag-and-drop hints */
+@media (hover: none) {
+    .kbd-hint, .attach-hint { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

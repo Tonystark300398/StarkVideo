@@ -3,15 +3,15 @@
 ## Free engine (default): no key, no credit card
 
 The site uses **LTX-Video** by Lightricks, through its free demo server on Hugging Face
-(`Lightricks/ltx-video-distilled`). Just type a prompt and click **Generate Video (Free)**.
+(`Lightricks/ltx-video-distilled`). Just type a prompt and click **Make video**.
 
 - Videos are 2–5 seconds, 704×480 (16:9) or 480×704 (9:16), with no audio.
 - It usually takes 20–90 seconds, plus a wait if other people are in the queue.
-- Free GPU time is limited per visitor. If you see "used up the free GPU time", wait a while, or
+- Free GPU time is limited per visitor. If you see "Free GPU time has run out", wait a while, or
   create a free account at huggingface.co and paste a **Read** token from
-  https://huggingface.co/settings/tokens into **Settings → Hugging Face Token** for more free time.
-- You can add a starting image to animate a photo.
-- The code is in `generateWithHF()` in `script.js`. It uses the official `@gradio/client` library from a CDN.
+  https://huggingface.co/settings/tokens into **Settings → Hugging Face token** for more free time.
+- You can add a starting photo to animate it: pick a file, drag it onto the form, or paste it into the prompt box.
+- The code is in `generateWithHF()` in `assets/js/script.js`. It uses the official `@gradio/client` library from a CDN.
 
 ---
 
@@ -29,8 +29,8 @@ The key must be from a project with **billing enabled**; free-tier keys get a 42
 ## 2. Add the key
 
 1. Open `index.html` in your browser (double-click it or use VS Code Live Server).
-2. Click **Settings** in the top bar.
-3. Choose a Veo engine, paste your key and click **Save Settings**.
+2. Click the engine button (gear icon) in the top bar to open **Settings**.
+3. Choose a Veo engine, paste your key and click **Save settings**.
 
 The key is stored only in your browser's `localStorage`.
 
@@ -47,12 +47,12 @@ The key is stored only in your browser's `localStorage`.
 1. Describe the video in English for best results (subject, action, setting, camera and sound).
 2. Pick the style, length (4, 6 or 8 s), aspect ratio (16:9 or 9:16) and resolution (720p, 1080p or 4K; 1080p and 4K are 8 s only).
 3. You can add a **starting image** to animate a photo (image-to-video).
-4. Click **Generate Video with Veo**. It usually takes 1–6 minutes. Click the button again to cancel.
+4. Click **Make video**. It usually takes 1–6 minutes. Click **Cancel** in the preview to stop.
 5. Download the MP4. **Google deletes generated videos after 2 days**, so save the ones you want.
 
 ## How it works (code)
 
-The flow lives in `script.js`, in the `generateWithVeo()` function:
+The flow lives in `assets/js/script.js`, in the `generateWithVeo()` function:
 
 1. `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:predictLongRunning`
    with header `x-goog-api-key` and this body:
@@ -69,10 +69,10 @@ The flow lives in `script.js`, in the `generateWithVeo()` function:
 
 | Error | Fix |
 |---|---|
-| "Invalid Gemini API key" | Re-copy the key from AI Studio into Settings. |
-| "Quota or rate limit reached" (429) | Turn on billing for the project, or wait and retry. |
-| "Model not found" (404) | Pick another Veo model in Settings; preview model names change over time. |
-| "Blocked by Google's safety filters" | Reword the prompt. Avoid real people, violence and so on. |
+| "That Gemini API key isn't valid" | Re-copy the key from AI Studio into Settings. |
+| "Your Gemini key has no Veo quota" (429) | Turn on billing for the project, or wait and retry. |
+| "Google didn't find that Veo model" (404) | Pick another Veo model in Settings; preview model names change over time. |
+| "Google's safety filter blocked this video" | Reword the prompt. Avoid real people, violence and so on. |
 | Nothing happens | Press F12 and check the Console tab for errors. |
 
 ## ⚠️ Security note
