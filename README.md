@@ -34,7 +34,7 @@ No dependencies are required. The project runs as plain HTML, CSS, and JavaScrip
 
 1. Clone the repo:
    ```bash
-   git clone https://github.com/Tonystark300398/My-first-website-demo.git StarkVideo
+   git clone https://github.com/Tonystark300398/StarkVideo.git
    cd StarkVideo
    ```
 2. Start a local server:
